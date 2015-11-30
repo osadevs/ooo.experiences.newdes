@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++--> 
+<!--                Open Simulation Architecture (OSA)                  -->
+<!--                                                                    -->
+<!--      This software is distributed under the terms of the           -->
+<!--           CECILL-C FREE SOFTWARE LICENSE AGREEMENT                 -->
+<!--  (see http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html) -->
+<!--                                                                    -->
+<!--  Copyright © 2006-2015 Université Nice Sophia Antipolis            -->
+<!--  Contact author: Olivier Dalle (olivier.dalle@unice.fr)            -->
+<!--                                                                    -->
+<!--  Parts of this software development were supported and hosted by   -->
+<!--  INRIA from 2006 to 2015, in the context of the common research    -->
+<!--  teams of INRIA and I3S, UMR CNRS 7172 (MASCOTTE, COATI, OASIS and -->
+<!--  SCALE).                                                           -->
+<!--++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++--> 
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<parent>
+		<groupId>org.osadev.osa</groupId>
+		<artifactId>maven-config</artifactId>
+		<version>0.8.1-SNAPSHOT</version>
+		<relativePath>../ooo.maven-config/</relativePath>
+	</parent>
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>org.osadev.osa.experiments.newdes</groupId>
+	<artifactId>osa-expe-newdes</artifactId>
+	<packaging>pom</packaging>
+	<name>OSA newdes experiences</name>
+
+	<properties>
+		<fractal.provider>org.objectweb.fractal.util.ChainedProvider</fractal.provider>
+		<fractal.providers>org.objectweb.fractal.julia.Julia,org.objectweb.fractal.koch.Koch</fractal.providers>
+		<!-- Override this in children pom to try out another blend of the of the 
+			basic engine, eg. 'judy' -->
+		<osa.basic.engine>basic</osa.basic.engine>
+		<osa.newdes.engine>newdes</osa.newdes.engine>
+		<profile.run>false</profile.run>
+		<log.config.file>log4j2-low.xml</log.config.file>
+	</properties>
+	
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.osadev.osa.model.newdes</groupId>
+				<artifactId>osa-model-newdes-event-helloworld</artifactId>
+				<version>0.8.1-SNAPSHOT</version>
+			</dependency>
+			<dependency>
+				<groupId>org.osadev.osa.model.newdes</groupId>
+				<artifactId>osa-model-newdes-helloworld-process</artifactId>
+				<version>0.8.1-SNAPSHOT</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+
+	<profiles>
+		<profile>
+			<!-- Javadonc generation takes time so it is not activiated by default. -->
+			<id>javadoc-only</id>
+			<build>
+				<defaultGoal>install</defaultGoal>
+				<resources>
+					<resource>
+						<directory>src/main/resources</directory>
+						<includes>
+							<include>*.xml</include>
+							<include>*.properties</include>
+							<include>*.cfg</include>
+							<include>**/*.fractal</include>
+						</includes>
+					</resource>
+				</resources>
+				<plugins>
+					<!-- Add automatic generation of javadoc archive to all descendent projects 
+						such that the javadoc can be automatically downloaded and installed along 
+						with the binary archive. -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-javadoc-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>attach-javadocs</id>
+								<goals>
+									<goal>jar</goal>
+								</goals>
+							</execution>
+
+						</executions>
+						<configuration>
+							<force>true</force>
+							<noindex>true</noindex>
+							<nonavbar>true</nonavbar>
+							<notree>true</notree>
+							<level>public</level>
+						</configuration>
+					</plugin>
+					<plugin>
+						<groupId>com.github.jeluard</groupId>
+						<artifactId>plantuml-maven-plugin</artifactId>
+						<configuration>
+							<sourceFiles>
+								<directory>${basedir}</directory>
+								<includes>
+									<include>src/main/java/**/*.java</include>
+								</includes>
+							</sourceFiles>
+							<outputDirectory>${basedir}/target/apidocs/</outputDirectory>
+							<outputInSourceDirectory>true</outputInSourceDirectory>
+						</configuration>
+						<executions>
+							<execution>
+								<phase>generate-resources</phase>
+								<goals>
+									<goal>generate</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+		<!-- Help profile is activated by default as soon as an help.txt file 
+				is found at the root of the module. In this case, calling mvn with parameter 
+				or with a wrong profile ends up showing the help.txt !- content. -->
+			<id>help</id>
+			<activation>
+				<file>
+					<exists>help.txt</exists>
+				</file>
+			</activation>
+			<build>
+				<!-- We assume there is no conflict with site building !- when the help 
+					profile is used. -->
+				<defaultGoal>pre-site</defaultGoal>
+				<plugins>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<version>1.3.2</version>
+						<executions>
+							<execution>
+								<goals>
+									<goal>exec</goal>
+								</goals>
+								<phase>pre-site</phase>
+							</execution>
+						</executions>
+
+						<configuration>
+							<includeProjectDependencies>true</includeProjectDependencies>
+							<executable>cat</executable>
+							<arguments>
+								<argument>help.txt</argument>
+							</arguments>
+						</configuration>
+
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<profile>
+			<!-- Execute when run profile is active, eg. using mvn -Prun -->
+			<id>run</id>
+			<activation>
+				<property>
+					<name>profile.run</name>
+					<value>true</value>
+				</property>
+			</activation>
+			<build>
+				<defaultGoal>initialize</defaultGoal>
+				<plugins>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<version>1.3.2</version>
+						<executions>
+							<execution>
+								<goals>
+									<goal>exec</goal>
+								</goals>
+								<phase>initialize</phase>
+							</execution>
+						</executions>
+						<configuration>
+							<includeProjectDependencies>true</includeProjectDependencies>
+							<executable>java</executable>
+							<arguments>
+								<argument>-Xmx1500M</argument>
+								<argument>-Dfractal.provider=${fractal.provider}</argument>
+								<argument>-Dlog4j.configurationFile=${log.config.file}</argument>
+								<argument>-Dfractal.providers=${fractal.providers}</argument>
+								<argument>-Djulia.config=${fractal.julia.config}</argument>
+								<argument>-classpath</argument>
+								<classpath />
+								<argument>${osa.launcher.file}</argument>
+								<argument>${fractal.file}</argument>
+							</arguments>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+	
+	<modules>
+		<module>../ooo.experiments.newdes.helloworld-event</module>
+		<module>../ooo.experiments.newdes.helloworld-process</module>
+	</modules>
+
+</project>
